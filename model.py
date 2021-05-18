@@ -3,11 +3,12 @@ import math
 
 
 class Agent:
-
+    
     def __init__(self, position, **agent_attributes):
         self.position = position
         for attr_name, attr_value in agent_attributes.items():
             setattr(self, attr_name, attr_value)
+
 
     def say_hello(self, first_name):
         return "Bien le bonjour " + first_name+ "!"
@@ -33,9 +34,10 @@ class Zone:
     MIN_LONGITUDE_DEGREES = -180
     MAX_LONGITUDE_DEGREES = 180
     MIN_LATITUDE_DEGREES = -90
-    MAX_LATITUDE_DEGREES = 90
+    MAX_LATITUDE_DEGREES = 90 
     WIDTH_DEGREES = 1 # degrees of longitude
     HEIGHT_DEGREES = 1 # degrees of latitude
+    EARTH_RADIUS_KILOMETERS = 6371
 
     def __init__(self, corner1, corner2):
         self.corner1 = corner1
@@ -46,8 +48,33 @@ class Zone:
     def population(self):
         return len(self.inhabitants)
 
+    @property
+    def width(self):
+        return abs(self.corner1.longitude - self.corner2.longitude) * self.EARTH_RADIUS_KILOMETERS
+
+    @property
+    def height(self):
+        return abs(self.corner1.latitude - self.corner2.latitude) * self.EARTH_RADIUS_KILOMETERS
+
+    @property
+    def area(self):
+        """Compute the zone area, in square kilometers"""
+        return self.height * self.width
+
+    def population_density(self):
+        """Population density of the zone, (people/km²)"""
+        # Note that this will crash with a ZeroDivisionError if the zone has 0
+        # area, but it should really not happen
+        return self.population / self.area
+
+
     def add_inhabitant(self, inhabitant):
         self.inhabitants.append(inhabitant)
+
+    def average_agreeableness(self):
+        if not self.inhabitants:
+            return 0
+        return sum([inhabitant.agreeableness for inhabitant in self.inhabitants]) / self.population
 
     def contains(self, position):
         return position.longitude >= min(self.corner1.longitude, self.corner2.longitude) and \
@@ -57,11 +84,11 @@ class Zone:
 
     @classmethod
     def find_zone_that_contains(cls, position):
-        # Compute the index in the ZONES array that contains the given position
         if not cls.ZONES:
             # Initialize zones automatically if necessary
             cls._initialize_zones()
 
+        # Compute the index in the ZONES array that contains the given position
         longitude_index = int((position.longitude_degrees - cls.MIN_LONGITUDE_DEGREES)/ cls.WIDTH_DEGREES)
         latitude_index = int((position.latitude_degrees - cls.MIN_LATITUDE_DEGREES)/ cls.HEIGHT_DEGREES)
         longitude_bins = int((cls.MAX_LONGITUDE_DEGREES - cls.MIN_LONGITUDE_DEGREES) / cls.WIDTH_DEGREES) # 180-(-180) / 1
@@ -95,6 +122,6 @@ def main():
         agent = Agent(position, **agent_attributes)
         zone = Zone.find_zone_that_contains(position)
         zone.add_inhabitant(agent)
-        print(zone.population)
+        print(zone.average_agreeableness())
 
 main()
